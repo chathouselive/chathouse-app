@@ -1,5 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 
+// ─── MOBILE HOOK ───────────────────────────────────────────────────────────────
+function useWindowWidth() {
+  const [width, setWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  useEffect(() => {
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return width;
+}
+
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Outfit:wght@400;500;600;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -11,35 +22,101 @@ const GLOBAL_CSS = `
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes pulse { 0%,100% { box-shadow: 0 0 0 3px #bbf7d0; } 50% { box-shadow: 0 0 0 7px #dcfce7; } }
   @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  /* Mobile bottom nav safe area */
+  .mobile-safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 `;
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 const LISTINGS = [
-  { id:1, type:"sale", address:"4821 Magnolia Creek Dr", city:"Austin, TX", zip:"78745", price:549000, beds:4, baths:3, sqft:2340, source:"Listing Network", daysAgo:1, lat:30.22, lng:-97.78, img:"https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=700&q=80", likes:34, tag:"New Listing", tagColor:"#16a34a", hood:"South Congress", comments:[{id:1,user:"Marcus T.",av:"M",time:"2h ago",text:"Backyard looks massive for Austin. Anyone know the lot size?",likes:5,roleLabel:"🏠 Potential Buyer"},{id:2,user:"Priya N.",av:"P",time:"1h ago",text:"Kitchen was just renovated — looks really clean!",likes:3}] },
-  { id:2, type:"sale", address:"112 Lakeview Terrace", city:"Atlanta, GA", zip:"30305", price:875000, beds:5, baths:4, sqft:3800, source:"Listing Network", daysAgo:0, lat:33.85, lng:-84.39, img:"https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=700&q=80", likes:61, tag:"Just Listed", tagColor:"#2563eb", hood:"Buckhead", comments:[{id:1,user:"Dana W.",av:"D",time:"45m ago",text:"Schools here are A-rated. Great value for Buckhead.",likes:12,roleLabel:"👋 Neighbor"}] },
-  { id:3, type:"sale", address:"893 Coastal Ridge Blvd", city:"Tampa, FL", zip:"33602", price:415000, beds:3, baths:2, sqft:1780, source:"Listing Network", daysAgo:2, lat:27.95, lng:-82.46, img:"https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=700&q=80", likes:19, tag:"Price Drop", tagColor:"#dc2626", hood:"Downtown Tampa", comments:[] },
-  { id:4, type:"sale", address:"2204 Stonebrook Lane", city:"Charlotte, NC", zip:"28277", price:689000, beds:4, baths:3.5, sqft:3100, source:"Listing Network", daysAgo:1, lat:35.05, lng:-80.79, img:"https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=700&q=80", likes:47, tag:"New Listing", tagColor:"#16a34a", hood:"Ballantyne", comments:[{id:1,user:"James R.",av:"J",time:"3h ago",text:"HOA is $180/mo but includes pool & tennis. Worth it.",likes:8},{id:2,user:"Tasha M.",av:"T",time:"2h ago",text:"Toured this — ceilings are gorgeous, very quiet street.",likes:14,roleLabel:"🏠 Potential Buyer"}] },
-  { id:5, type:"sale", address:"517 Elmwood Park Ct", city:"Denver, CO", zip:"80203", price:760000, beds:4, baths:3, sqft:2890, source:"Listing Network", daysAgo:0, lat:39.74, lng:-104.99, img:"https://images.unsplash.com/photo-1625602812206-5ec545ca1231?w=700&q=80", likes:52, tag:"Just Listed", tagColor:"#2563eb", hood:"Capitol Hill", comments:[{id:1,user:"Lena K.",av:"L",time:"1h ago",text:"Views of the Rockies from the back deck. Yes please!",likes:9}] },
-  { id:6, type:"sale", address:"3311 Harbor Oaks Dr", city:"Houston, TX", zip:"77019", price:1100000, beds:6, baths:5, sqft:5200, source:"Listing Network", daysAgo:3, lat:29.76, lng:-95.37, img:"https://images.unsplash.com/photo-1613977257363-707ba9348227?w=700&q=80", likes:88, tag:"Open House", tagColor:"#7c3aed", hood:"River Oaks", comments:[{id:1,user:"Brent A.",av:"B",time:"5h ago",text:"River Oaks never disappoints. This one is especially sharp.",likes:21,roleLabel:"💼 Investor"},{id:2,user:"Sofia R.",av:"S",time:"2h ago",text:"Price/sqft is actually competitive for this area.",likes:17}] },
-  { id:7, type:"rent", address:"310 W 85th St, Apt 4C", city:"New York, NY", zip:"10024", price:3200, beds:1, baths:1, sqft:720, source:"Rental Network", daysAgo:0, lat:40.785, lng:-73.978, img:"https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=700&q=80", likes:41, tag:"For Rent", tagColor:"#ea580c", hood:"Upper West Side", comments:[
-    {id:1, user:"Keisha T.", av:"K", time:"3h ago",   text:"Lived in this building 2 years — super responsive landlord. Heat works great, no bugs, zero pest issues.", likes:18, roleLabel:"🗝️ Current Tenant", verified:true},
-    {id:2, user:"Nate G.",   av:"N", time:"5h ago",   text:"Is street parking even possible on this block? I have a car and that's a dealbreaker for me.", likes:4,  roleLabel:"🏠 Potential Buyer"},
-    {id:3, user:"Amber R.",  av:"A", time:"8h ago",   text:"The super is incredibly responsive. Maintenance requests get handled within 24 hours, sometimes same day. Rare for NYC.", likes:22, roleLabel:"🏢 Past Tenant", verified:true},
-    {id:4, user:"Devon R.",  av:"D", time:"10h ago",  text:"Noise level is surprisingly low for being this close to Broadway. Double pane windows do a lot of work.", likes:11, roleLabel:"👋 Neighbor"},
-    {id:5, user:"Lena K.",   av:"L", time:"12h ago",  text:"Hot water pressure is strong and consistent. Never had an issue in 18 months here.", likes:9,  roleLabel:"🗝️ Current Tenant", verified:true},
-    {id:6, user:"Chris V.",  av:"C", time:"1 day ago",text:"Careful — the laundry room is only open 8am to 10pm. Annoying if you work late shifts.", likes:14, roleLabel:"🏢 Past Tenant", verified:true},
-    {id:7, user:"Sofia R.",  av:"S", time:"1 day ago",text:"Pet friendly! My dog has lived here with no issues. They do charge a one-time pet deposit though.", likes:17, roleLabel:"🗝️ Current Tenant", verified:true},
-    {id:8, user:"Marcus T.", av:"M", time:"2 days ago",text:"Is there an elevator in the building? The listing doesn't mention it.", likes:3,  roleLabel:"🏠 Potential Buyer"},
-    {id:9, user:"Keisha T.", av:"K", time:"2 days ago",text:"Yes there's an elevator — it's small but works fine. Building has 6 floors.", likes:8,  roleLabel:"🗝️ Current Tenant", verified:true},
-    {id:10,user:"Jordan M.", av:"J", time:"3 days ago",text:"The neighborhood is fantastic. Riverside Park is literally 2 blocks away — perfect if you run or have a dog.", likes:21, roleLabel:"👋 Neighbor"},
-    {id:11,user:"Tyrese W.", av:"T", time:"3 days ago",text:"Anyone know if they allow sublets? I travel for work and may need to sublet for a few months.", likes:6,  roleLabel:"🏠 Potential Buyer"},
-    {id:12,user:"Amber R.",  av:"A", time:"4 days ago",text:"No sublets allowed — checked when I was there. Landlord was firm on it. Something to keep in mind.", likes:12, roleLabel:"🏢 Past Tenant", verified:true},
+  { id:1, type:"sale", address:"4821 Magnolia Creek Dr", city:"Austin, TX", zip:"78745", price:549000, beds:4, baths:3, sqft:2340, source:"Listing Network", daysAgo:1, lat:30.22, lng:-97.78, img:"https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=700&q=80", likes:34, tag:"New Listing", tagColor:"#16a34a", hood:"South Congress", comments:[
+    {id:1,user:"Marcus T.",av:"M",time:"3h ago",text:"Backyard is massive for Austin — anyone know the actual lot size? Google says 0.3 acres but that seems big for this zip.",likes:5,roleLabel:"🏠 Potential Buyer"},
+    {id:2,user:"Priya N.",av:"P",time:"2h ago",text:"We toured this last weekend. The kitchen renovation is legitimately beautiful — new quartz counters, all appliances 2023. Neighborhood is very quiet, we saw two families with strollers just walking around on a Tuesday afternoon.",likes:12,roleLabel:"🏠 Potential Buyer"},
+    {id:3,user:"Derek H.",av:"D",time:"2h ago",text:"@Priya we're also looking in South Congress! Small world. Did you notice any noise from the highway? We're worried about 290.",likes:4,roleLabel:"🏠 Potential Buyer"},
+    {id:4,user:"Priya N.",av:"P",time:"1h ago",text:"@Derek honestly didn't notice any highway noise at all and we were there for almost an hour. The backyard has mature trees which probably helps. Are you relocating from out of state too?",likes:7,roleLabel:"🏠 Potential Buyer"},
+    {id:5,user:"Derek H.",av:"D",time:"1h ago",text:"Yes! Moving from Chicago in June. We should connect — would be great to know someone in the neighborhood before we move. Sending you a connect request.",likes:9,roleLabel:"🏠 Potential Buyer"},
+    {id:6,user:"Sandra Lee",av:"S",time:"45m ago",text:"I'm a local agent who's sold 3 homes on this block in the past 18 months. Happy to pull comps if anyone wants — this price is competitive but there's room. Feel free to link me as your agent if you'd like representation.",likes:8,roleLabel:"🤝 Agent"},
   ]},
-  { id:8, type:"rent", address:"57 Driggs Ave, Unit 2R", city:"New York, NY", zip:"11211", price:2800, beds:1, baths:1, sqft:650, source:"Rental Network", daysAgo:1, lat:40.716, lng:-73.951, img:"https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=700&q=80", likes:29, tag:"For Rent", tagColor:"#ea580c", hood:"Williamsburg", comments:[{id:1,user:"Amber R.",av:"A",time:"5h ago",text:"Landlord took 6 weeks to fix the heat last winter. Think twice.",likes:31,roleLabel:"🏢 Past Tenant",verified:true,anonymous:false, officialResponse:{ text:"Hi — thank you for sharing this. We take heating issues seriously and we're sorry for the delay you experienced. We've since upgraded our HVAC vendor and response times are now under 48 hours. We'd welcome the chance to speak with you directly.", time:"3h ago", manager:"David Park · Park Property Group" }},{id:2,user:"Chris V.",av:"C",time:"2h ago",text:"Neighborhood is amazing though — L train is right there.",likes:9}] },
-  { id:9, type:"rent", address:"142 Montague St, Apt 8", city:"New York, NY", zip:"11201", price:3800, beds:2, baths:1, sqft:900, source:"Rental Network", daysAgo:0, lat:40.694, lng:-73.994, img:"https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=700&q=80", likes:55, tag:"Just Listed", tagColor:"#2563eb", hood:"Brooklyn Heights", comments:[{id:1,user:"Sofia R.",av:"S",time:"1h ago",text:"Brooklyn Heights is one of the best kept secrets. This price is actually fair for the area.",likes:22}] },
-  { id:10, type:"rent", address:"2241 Frederick Douglass Blvd, 3F", city:"New York, NY", zip:"10027", price:2400, beds:1, baths:1, sqft:600, source:"Rental Network", daysAgo:2, lat:40.804, lng:-73.954, img:"https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=700&q=80", likes:37, tag:"Price Drop", tagColor:"#dc2626", hood:"Harlem", comments:[{id:1,user:"Marcus T.",av:"M",time:"4h ago",text:"Harlem is having a real moment right now. Great restaurants on this block.",likes:14},{id:2,user:"Priya N.",av:"P",time:"2h ago",text:"Management company is responsive — I have a friend in this building.",likes:8}] },
-  { id:11, type:"rent", address:"88 E 3rd St, Apt 5A", city:"New York, NY", zip:"10003", price:3500, beds:1, baths:1, sqft:680, source:"Rental Network", daysAgo:0, lat:40.726, lng:-73.989, img:"https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=700&q=80", likes:63, tag:"Just Listed", tagColor:"#2563eb", hood:"East Village", comments:[{id:1,user:"Devon R.",av:"D",time:"30m ago",text:"East Village walkability is unmatched. Everything is 5 mins away.",likes:19},{id:2,user:"Lena K.",av:"L",time:"15m ago",text:"Noise level on this street is real though — ask about window quality.",likes:11}] },
-  { id:12, type:"rent", address:"415 Edgecombe Ave, 6D", city:"New York, NY", zip:"10031", price:1950, beds:1, baths:1, sqft:580, source:"Rental Network", daysAgo:1, lat:40.824, lng:-73.941, img:"https://images.unsplash.com/photo-1484154218962-a197022b5858?w=700&q=80", likes:44, tag:"For Rent", tagColor:"#ea580c", hood:"Washington Heights", comments:[{id:1,user:"James R.",av:"J",time:"6h ago",text:"Best value in Manhattan right now. A train gets you to midtown in 20 mins.",likes:27},{id:2,user:"Tasha M.",av:"T",time:"3h ago",text:"Landlord is old school but fixes things fast. Been here 3 years.",likes:15,roleLabel:"🗝️ Current Tenant"}] },
+  { id:2, type:"sale", address:"112 Lakeview Terrace", city:"Atlanta, GA", zip:"30305", price:875000, beds:5, baths:4, sqft:3800, source:"Listing Network", daysAgo:0, lat:33.85, lng:-84.39, img:"https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=700&q=80", likes:61, tag:"Just Listed", tagColor:"#2563eb", hood:"Buckhead", comments:[
+    {id:1,user:"Dana W.",av:"D",time:"5h ago",text:"Schools here are genuinely A-rated — my kids went to the elementary two blocks over for 4 years. Phenomenal teachers, very involved community. The PTA actually raises money effectively lol.",likes:22,roleLabel:"👋 Neighbor"},
+    {id:2,user:"Troy B.",av:"T",time:"4h ago",text:"Lived two doors down for 6 years. Street is incredibly quiet — mostly families and a few older couples. The Lakeview park at the end of the street has been recently renovated, kids are out there every weekend.",likes:18,roleLabel:"🗝️ Current Resident"},
+    {id:3,user:"Alicia M.",av:"A",time:"3h ago",text:"Is the price negotiable on a place like this? First time buying at this price point and I genuinely don't know what's normal in Buckhead right now.",likes:6,roleLabel:"🏠 Potential Buyer"},
+    {id:4,user:"Dana W.",av:"D",time:"2h ago",text:"@Alicia market has cooled a bit since last year — homes on this street were going $50-80k over ask in 2023. Right now comparable homes are selling within 2-3% of list. You have more room to negotiate than you would have 18 months ago.",likes:14,roleLabel:"👋 Neighbor"},
+    {id:5,user:"Robert Chen",av:"R",time:"1h ago",text:"For anyone making an offer here — pre-approval is critical in Buckhead even when the market softens. Happy to get you a same-day pre-approval letter so you're ready to move fast when you find the right one. Sending connect requests to interested buyers.",likes:11,roleLabel:"🏦 Mortgage Broker"},
+  ]},
+  { id:3, type:"sale", address:"893 Coastal Ridge Blvd", city:"Tampa, FL", zip:"33602", price:415000, beds:3, baths:2, sqft:1780, source:"Listing Network", daysAgo:2, lat:27.95, lng:-82.46, img:"https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=700&q=80", likes:19, tag:"Price Drop", tagColor:"#dc2626", hood:"Downtown Tampa", comments:[
+    {id:1,user:"Carlos M.",av:"C",time:"1d ago",text:"Anyone know why the price dropped $22k? That's a significant cut for a home that's only been listed 3 weeks.",likes:31,roleLabel:"💼 Investor"},
+    {id:2,user:"Jenny R.",av:"J",time:"23h ago",text:"I asked the listing agent — apparently a first offer fell through after inspection. There were some issues flagged with the HVAC system and the buyer backed out. Worth getting an independent inspector in before you commit.",likes:44,roleLabel:"🏠 Potential Buyer"},
+    {id:3,user:"Carlos M.",av:"C",time:"22h ago",text:"@Jenny that's really helpful, thank you. Do you know if the sellers addressed the HVAC issues or just dropped the price instead?",likes:8,roleLabel:"💼 Investor"},
+    {id:4,user:"Jenny R.",av:"J",time:"21h ago",text:"@Carlos from what I was told they got a quote but haven't done the repair yet — that's why the price drop. Factor in at minimum $6-8k for HVAC work when you're making your offer.",likes:19,roleLabel:"🏠 Potential Buyer"},
+    {id:5,user:"Mike T.",av:"M",time:"12h ago",text:"Location is unbeatable for the price point even with the HVAC thing. Riverwalk is literally 8 minutes. Downtown Tampa has changed completely in the last 3 years — Armature Works, the new waterfront development. This neighborhood will look very different in 5 years.",likes:16,roleLabel:"👋 Neighbor"},
+  ]},
+  { id:4, type:"sale", address:"2204 Stonebrook Lane", city:"Charlotte, NC", zip:"28277", price:689000, beds:4, baths:3.5, sqft:3100, source:"Listing Network", daysAgo:1, lat:35.05, lng:-80.79, img:"https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=700&q=80", likes:47, tag:"New Listing", tagColor:"#16a34a", hood:"Ballantyne", comments:[
+    {id:1,user:"James R.",av:"J",time:"8h ago",text:"HOA is $180/mo which sounds high but actually includes pool, tennis courts, landscaping of common areas, and the neighborhood security patrol. We've been here 4 years and genuinely feel like it's worth it.",likes:28,roleLabel:"🗝️ Current Resident"},
+    {id:2,user:"Tasha M.",av:"T",time:"6h ago",text:"Toured yesterday — 10ft ceilings on the main floor, very airy. Street is incredibly quiet for how close you are to 521. Kids from like 6 different families were playing outside when we drove up which felt like a good sign.",likes:21,roleLabel:"🏠 Potential Buyer"},
+    {id:3,user:"Brandon K.",av:"B",time:"5h ago",text:"@Tasha we're also looking in Ballantyne and toured this same morning! What did you think of the basement? We thought the finish level was a little inconsistent with the rest of the house.",likes:9,roleLabel:"🏠 Potential Buyer"},
+    {id:4,user:"Tasha M.",av:"T",time:"4h ago",text:"@Brandon totally agree on the basement — flooring felt like an afterthought compared to upstairs. But honestly for the price in Ballantyne with this school district I think you overlook it. Are you also moving from out of state?",likes:7,roleLabel:"🏠 Potential Buyer"},
+    {id:5,user:"Brandon K.",av:"B",time:"3h ago",text:"Yes! From DC. My wife and I are doing this whole search remotely which is stressful. Nice to actually connect with someone who's been in the same homes. Sending you a connect request — would love to compare notes.",likes:15,roleLabel:"🏠 Potential Buyer"},
+    {id:6,user:"James R.",av:"J",time:"1h ago",text:"@Brandon happy to answer any questions about the neighborhood as a current resident. The Ballantyne Corporate Park makes the commute for a lot of us really manageable — I walk to work which is rare in Charlotte.",likes:18,roleLabel:"🗝️ Current Resident"},
+  ]},
+  { id:5, type:"sale", address:"517 Elmwood Park Ct", city:"Denver, CO", zip:"80203", price:760000, beds:4, baths:3, sqft:2890, source:"Listing Network", daysAgo:0, lat:39.74, lng:-104.99, img:"https://images.unsplash.com/photo-1625602812206-5ec545ca1231?w=700&q=80", likes:52, tag:"Just Listed", tagColor:"#2563eb", hood:"Capitol Hill", comments:[
+    {id:1,user:"Lena K.",av:"L",time:"4h ago",text:"Views of the Rockies from the back deck are legitimately stunning. We sat out there for 20 minutes during the tour just taking it in. Seller had Adirondack chairs set up which was maybe strategic but honestly it worked on me.",likes:24,roleLabel:"🏠 Potential Buyer"},
+    {id:2,user:"Omar S.",av:"O",time:"3h ago",text:"Capitol Hill has changed a lot — it used to have a reputation but the last 4-5 years it's become genuinely one of the best neighborhoods in Denver. Cheesman Park is 3 blocks and the restaurant scene on 13th is excellent.",likes:19,roleLabel:"👋 Neighbor"},
+    {id:3,user:"Lena K.",av:"L",time:"2h ago",text:"@Omar that's really reassuring to hear from someone who actually lives there. Is parking manageable? The listing says 2-car garage but we'd have 3 cars between us.",likes:5,roleLabel:"🏠 Potential Buyer"},
+    {id:4,user:"Omar S.",av:"O",time:"2h ago",text:"@Lena street parking on Elmwood Park specifically is actually pretty easy — it's a court so there's less through traffic. The streets closer to 13th get tight on weekend nights but that block specifically is fine.",likes:11,roleLabel:"👋 Neighbor"},
+    {id:5,user:"Sandra Lee",av:"S",time:"1h ago",text:"For anyone seriously considering this one — Denver's inventory is still low and well-priced Capitol Hill homes move fast. I've helped 8 buyers in this zip in the past year. Happy to connect and share what I'm seeing in the market.",likes:14,roleLabel:"🤝 Agent"},
+  ]},
+  { id:6, type:"sale", address:"3311 Harbor Oaks Dr", city:"Houston, TX", zip:"77019", price:1100000, beds:6, baths:5, sqft:5200, source:"Listing Network", daysAgo:3, lat:29.76, lng:-95.37, img:"https://images.unsplash.com/photo-1613977257363-707ba9348227?w=700&q=80", likes:88, tag:"Open House", tagColor:"#7c3aed", hood:"River Oaks", comments:[
+    {id:1,user:"Brent A.",av:"B",time:"2d ago",text:"River Oaks never disappoints but this one is especially sharp. The primary suite is genuinely hotel-level — separate his and hers closets, soaking tub with a view. Price per sqft is actually competitive for the street.",likes:33,roleLabel:"💼 Investor"},
+    {id:2,user:"Sofia R.",av:"S",time:"1d ago",text:"Been tracking River Oaks listings for 8 months. This price is $40-50/sqft below what comparable homes sold for in Q3 last year. Either there's something wrong I'm not seeing or this is genuinely one of the better values on the market right now.",likes:41,roleLabel:"🏠 Potential Buyer"},
+    {id:3,user:"Brent A.",av:"B",time:"1d ago",text:"@Sofia I had the same reaction. Did some research — the sellers are relocating internationally, motivated to close before June. That explains the pricing. I'd move on this fast if you're serious.",likes:29,roleLabel:"💼 Investor"},
+    {id:4,user:"Camille T.",av:"C",time:"18h ago",text:"Grew up two streets over. Harbor Oaks specifically gets the best trick-or-treating in all of Houston, which is very important information. Also genuinely the safest street I've ever lived on — we never locked our doors as kids.",likes:37,roleLabel:"👋 Neighbor"},
+    {id:5,user:"Robert Chen",av:"R",time:"12h ago",text:"At this price point, financing strategy matters a lot. Jumbo loan landscape has shifted significantly in 2025 — rates have come down but qualifying requirements tightened. Happy to walk through options with anyone making a move at this level.",likes:18,roleLabel:"🏦 Mortgage Broker"},
+  ]},
+  { id:7, type:"rent", address:"310 W 85th St, Apt 4C", city:"New York, NY", zip:"10024", price:3200, beds:1, baths:1, sqft:720, source:"Rental Network", daysAgo:0, lat:40.785, lng:-73.978, img:"https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=700&q=80", likes:41, tag:"For Rent", tagColor:"#ea580c", hood:"Upper West Side", comments:[
+    {id:1,user:"Amber R.",av:"A",time:"6h ago",text:"DO NOT rent here without asking specifically about the boiler. Ours broke in January and we had no heat for 11 days. Management's response was essentially 'we're working on it.' No timeline, no space heaters, nothing. Filed an HPD complaint and suddenly it got fixed.",likes:67,roleLabel:"🏢 Past Tenant",verified:true,anonymous:false},
+    {id:2,user:"Marcus T.",av:"M",time:"5h ago",text:"@Amber that's really alarming — 11 days with no heat in January in NYC is genuinely dangerous. Did you get any rent abatement for that period?",likes:19,roleLabel:"🏠 Potential Buyer"},
+    {id:3,user:"Amber R.",av:"A",time:"4h ago",text:"@Marcus we had to fight for it. They offered 3 days, we pushed back citing HPD records and ultimately got 8 days. You have to know your rights or they will absolutely take advantage.",likes:44,roleLabel:"🏢 Past Tenant",verified:true},
+    {id:4,user:"Kevin L.",av:"K",time:"3h ago",text:"I'm in 3B right now and can confirm — management is unresponsive until you escalate. That said, the building itself is solid, very quiet floors and walls, no pest issues in 2 years which is rare for UWS pre-war. You just have to be the kind of tenant who advocates for yourself.",likes:22,roleLabel:"🗝️ Current Tenant",verified:true},
+    {id:5,user:"Jasmine W.",av:"J",time:"2h ago",text:"Location is genuinely one of the best on the UWS. Riverside Park is 2 blocks, C train is right there, Zabar's is 4 blocks. I'm considering it despite the management reviews because I know this block well and $3,200 for a 1BR here is below market.",likes:15,roleLabel:"🏠 Potential Buyer"},
+    {id:6,user:"Park Property Group",av:"P",time:"1h ago",text:"We hear this feedback and take it seriously. The boiler incident in January was handled below our standard and we've since contracted a new HVAC vendor with guaranteed 24-hour response. We'd welcome a conversation with any prospective tenant about the steps we've taken.",likes:3,roleLabel:"🏢 Official Response",officialResponse:true},
+  ]},
+  { id:8, type:"rent", address:"57 Driggs Ave, Unit 2R", city:"New York, NY", zip:"11211", price:2800, beds:1, baths:1, sqft:650, source:"Rental Network", daysAgo:1, lat:40.716, lng:-73.951, img:"https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=700&q=80", likes:29, tag:"For Rent", tagColor:"#ea580c", hood:"Williamsburg", comments:[
+    {id:1,user:"Amber R.",av:"A",time:"1d ago",text:"Landlord took 6 full weeks to fix the heat last winter. Every maintenance request went into a void — you'd submit online, get an auto-confirmation, then nothing. Had to call 311 twice before anyone showed up.",likes:51,roleLabel:"🏢 Past Tenant",verified:true,anonymous:false,officialResponse:{text:"Hi — we take heating issues seriously and we're sorry for the delay you experienced. We've since upgraded our HVAC vendor and implemented a 48-hour mandatory response policy. We'd welcome the chance to speak with you directly about your experience.", time:"3h ago", manager:"David Park · Park Property Group"}},
+    {id:2,user:"Chris V.",av:"C",time:"22h ago",text:"Neighborhood is legitimately amazing though — L train is literally downstairs, the food on Bedford is some of the best in Brooklyn. I'd consider it despite the management stuff because Williamsburg at $2,800 for a 1BR is actually hard to beat.",likes:18,roleLabel:"👋 Neighbor"},
+    {id:3,user:"Tanya F.",av:"T",time:"20h ago",text:"I lived in 3F for 18 months. The management issue is real but I want to add some nuance — emergency repairs (water leak, electrical) always got addressed within 24 hours in my experience. It was the non-emergency stuff (heat, minor fixtures) that took forever.",likes:27,roleLabel:"🏢 Past Tenant",verified:true},
+    {id:4,user:"Leo K.",av:"L",time:"15h ago",text:"@Tanya that's actually really useful context. Prioritizing emergencies correctly and being slow on comfort issues is annoying but survivable. Do you know if the soundproofing between units is decent?",likes:9,roleLabel:"🏠 Potential Buyer"},
+    {id:5,user:"Tanya F.",av:"T",time:"14h ago",text:"@Leo floors are pre-war thick so you don't hear footsteps. I could occasionally hear my neighbor's music through the shared wall but only when it was loud. Overall better than most NYC apartments I've been in.",likes:16,roleLabel:"🏢 Past Tenant",verified:true},
+  ]},
+  { id:9, type:"rent", address:"142 Montague St, Apt 8", city:"New York, NY", zip:"11201", price:3800, beds:2, baths:1, sqft:900, source:"Rental Network", daysAgo:0, lat:40.694, lng:-73.994, img:"https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=700&q=80", likes:55, tag:"Just Listed", tagColor:"#2563eb", hood:"Brooklyn Heights", comments:[
+    {id:1,user:"Sofia R.",av:"S",time:"3h ago",text:"Brooklyn Heights is genuinely one of the most underrated neighborhoods in the city. $3,800 for a 2BR here is actually below what I've been seeing — last month I lost a 2BR on Henry St to a $4,200 offer above ask. This feels like real value.",likes:33,roleLabel:"🏠 Potential Buyer"},
+    {id:2,user:"David K.",av:"D",time:"2h ago",text:"Lived on Montague for 3 years. The street itself is perfect — walkable to everything but somehow quiet. Promenade is 5 minutes and you get the Manhattan skyline every morning. The 2/3 express is at the end of the block which cuts Midtown commute to 18 minutes.",likes:28,roleLabel:"🗝️ Current Resident"},
+    {id:3,user:"Priya N.",av:"P",time:"2h ago",text:"@Sofia we've also been looking in Brooklyn Heights! Have you toured this one? We're relocating from Boston and trying to get a feel for what these apartments actually look like vs the photos.",likes:7,roleLabel:"🏠 Potential Buyer"},
+    {id:4,user:"Sofia R.",av:"S",time:"1h ago",text:"@Priya not yet but I have a tour scheduled tomorrow at 10am. If you want to do the same slot and compare notes after I'm happy to share what I see. DM me — sending a connect request now.",likes:14,roleLabel:"🏠 Potential Buyer"},
+    {id:5,user:"Robert Chen",av:"R",time:"45m ago",text:"For anyone considering this — if you're relocating from out of state, some landlords in Brooklyn Heights are picky about out-of-state income verification. Getting a pre-approval letter from a NY-based lender can actually help your rental application look stronger. Happy to help if needed.",likes:11,roleLabel:"🏦 Mortgage Broker"},
+  ]},
+  { id:10, type:"rent", address:"2241 Frederick Douglass Blvd, 3F", city:"New York, NY", zip:"10027", price:2400, beds:1, baths:1, sqft:600, source:"Rental Network", daysAgo:2, lat:40.804, lng:-73.954, img:"https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=700&q=80", likes:37, tag:"Price Drop", tagColor:"#dc2626", hood:"Harlem", comments:[
+    {id:1,user:"Marcus T.",av:"M",time:"2d ago",text:"Harlem is having a real cultural moment right now — the restaurant scene on this block specifically is exceptional. Vinatería, Oso, Lolo are all within 3 blocks. $2,400 for a 1BR with this location is honestly a deal.",likes:26,roleLabel:"🏠 Potential Buyer"},
+    {id:2,user:"Keisha T.",av:"K",time:"1d ago",text:"I've been in this building for 2 years. The landlord is old school — no online portal, you pay by check — but he is genuinely responsive. When my sink had a slow drain I texted him directly and he sent someone the next morning. No drama.",likes:38,roleLabel:"🗝️ Current Tenant",verified:true},
+    {id:3,user:"Marcus T.",av:"M",time:"1d ago",text:"@Keisha that's really good to know. Is the building quiet? The listing photos show hardwood floors which I always worry about in terms of noise from upstairs.",likes:8,roleLabel:"🏠 Potential Buyer"},
+    {id:4,user:"Keisha T.",av:"K",time:"23h ago",text:"@Marcus the family above me has two young kids so I hear running sometimes on weekend mornings. It's not terrible but it's real. Everything else is very quiet — no noise from the street, the building is well insulated for a pre-war.",likes:15,roleLabel:"🗝️ Current Tenant",verified:true},
+    {id:5,user:"Devon R.",av:"D",time:"18h ago",text:"Frederick Douglass Blvd has improved dramatically in the last 5 years and it's still going. The C/B trains are one block away, Central Park is 10 minutes on foot. This is exactly the kind of block I'd want to be on if I were renting in Harlem right now.",likes:21,roleLabel:"💼 Investor"},
+  ]},
+  { id:11, type:"rent", address:"88 E 3rd St, Apt 5A", city:"New York, NY", zip:"10003", price:3500, beds:1, baths:1, sqft:680, source:"Rental Network", daysAgo:0, lat:40.726, lng:-73.989, img:"https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=700&q=80", likes:63, tag:"Just Listed", tagColor:"#2563eb", hood:"East Village", comments:[
+    {id:1,user:"Devon R.",av:"D",time:"5h ago",text:"East Village walkability score is basically perfect — every errand, every restaurant, every bar is within 10 minutes on foot. The F/M/1/2/3/6 are all accessible within 3 blocks which makes the whole city feel close.",likes:29,roleLabel:"👋 Neighbor"},
+    {id:2,user:"Lena K.",av:"L",time:"4h ago",text:"One thing worth knowing about E 3rd specifically: the noise level on weekends is real. There are 4 bars within half a block and on Friday/Saturday it's loud until 3-4am. If you're a light sleeper and you value weekends, tour it on a Saturday night before you sign.",likes:44,roleLabel:"🏢 Past Tenant",verified:true},
+    {id:3,user:"Tyler M.",av:"T",time:"3h ago",text:"@Lena this is incredibly helpful — I almost signed on an East Village place last year without realizing the same thing. The daytime tours make everything seem peaceful.",likes:22,roleLabel:"🏠 Potential Buyer"},
+    {id:4,user:"Devon R.",av:"D",time:"2h ago",text:"@Lena is 5A specifically bad for it or is it more of a building-wide issue? 5th floor seems like it might be high enough to have some distance from the street noise.",likes:10,roleLabel:"👋 Neighbor"},
+    {id:5,user:"Lena K.",av:"L",time:"2h ago",text:"@Devon I was in 2A so I can't speak to the 5th floor directly. Logically yes, higher is better for street noise. But the bar crowd spills onto the sidewalk and people are loud — I could hear conversations clearly from 2 floors up on weekend nights.",likes:19,roleLabel:"🏢 Past Tenant",verified:true},
+    {id:6,user:"Chris V.",av:"C",time:"1h ago",text:"For what it's worth I visited a friend in 6B and could still hear the street on a Friday night with windows closed. East Village character is real but so is the noise. Know what you're signing up for.",likes:17,roleLabel:"👋 Neighbor"},
+  ]},
+  { id:12, type:"rent", address:"415 Edgecombe Ave, 6D", city:"New York, NY", zip:"10031", price:1950, beds:1, baths:1, sqft:580, source:"Rental Network", daysAgo:1, lat:40.824, lng:-73.941, img:"https://images.unsplash.com/photo-1484154218962-a197022b5858?w=700&q=80", likes:44, tag:"For Rent", tagColor:"#ea580c", hood:"Washington Heights", comments:[
+    {id:1,user:"James R.",av:"J",time:"1d ago",text:"Best value in Manhattan right now and I'll die on this hill. A train gets you to 42nd in under 20 minutes, there's a full grocery store on the corner, and the community here is genuinely warm. I've lived in 5 Manhattan neighborhoods and this is the most neighborly.",likes:41,roleLabel:"🗝️ Current Resident"},
+    {id:2,user:"Tasha M.",av:"T",time:"20h ago",text:"Landlord is old school but fixes things fast — I've been here 3 years. Had a radiator issue last February and he personally came to check it the same day I reported it. That kind of responsiveness is almost impossible to find in Manhattan at this price.",likes:35,roleLabel:"🗝️ Current Tenant",verified:true},
+    {id:3,user:"Omar S.",av:"O",time:"18h ago",text:"$1,950 for a 1BR in Manhattan in 2025 is almost impossible to believe. Is there something I'm missing? What's the catch?",likes:22,roleLabel:"🏠 Potential Buyer"},
+    {id:4,user:"James R.",av:"J",time:"16h ago",text:"@Omar no catch — Washington Heights is just genuinely undervalued relative to downtown. The 'catch' is that it's not trendy and the subway takes longer than the Village. But if you care more about square footage, community, and actually being able to afford to save money, it's unbeatable.",likes:29,roleLabel:"🗝️ Current Resident"},
+    {id:5,user:"Keisha T.",av:"K",time:"12h ago",text:"@Omar I moved up here from the East Village 2 years ago and it was the best decision I made in NYC. Extra $1,200/month in savings, 30 more square feet, and I actually know my neighbors' names. The trade-off is absolutely worth it.",likes:33,roleLabel:"🗝️ Current Tenant",verified:true},
+    {id:6,user:"Omar S.",av:"O",time:"8h ago",text:"@James @Keisha this is exactly the kind of honest perspective I was looking for. I'm moving from Chicago and I'd been looking in LES and East Village. Might completely rethink. Sending both of you connect requests.",likes:18,roleLabel:"🏠 Potential Buyer"},
+  ]},
 ];
 
 // Mock user profiles showing broker status — visible only to agents/brokers
@@ -107,7 +184,11 @@ const DEMO_ACCOUNTS = {
   agent: {
     name:"Sandra Lee", email:"sandra@compass.com", av:"S", city:"New York, NY",
     accountType:"agent", licenseNum:"NY-1042873", agentBrokerage:"Compass NYC",
-    agentTier:"pro", photoPreview:null,
+    agentTier:"pro", photoPreview:null, isAlsoLandlord:true,
+    claimedListings:[
+      { listingId:7, address:"310 W 85th St, Apt 4C", hood:"Upper West Side", verified:true, verifiedDate:"6 months ago", totalComments:2, flaggedComments:0 },
+    ],
+    stats:{ claimedListings:1, totalResponses:3, avgResponseTime:"2 hrs", sentimentScore:88 },
     bio:"Licensed real estate agent with 8 years helping buyers and renters navigate NYC. Compass NYC · License NY-1042873. Straightforward, honest, and always in your corner.",
     updates:[
       {
@@ -343,16 +424,16 @@ function MyProfile({ user, onUpdateUser, isPro, pendingConnects=[] }) {
       {/* Profile header */}
       <div style={{ background:"#fff", borderRadius:16, border:"1px solid #e8eaed", overflow:"hidden", marginBottom:20 }}>
         <div style={{ height:72, background:"linear-gradient(135deg,#2563eb,#7c3aed)" }}/>
-        <div style={{ padding:"0 24px 20px" }}>
-          <div style={{ display:"flex", alignItems:"flex-end", gap:14, marginTop:-28, marginBottom:14 }}>
+        <div style={{ padding:"0 16px 20px" }}>
+          <div style={{ display:"flex", alignItems:"flex-end", gap:12, marginTop:-28, marginBottom:14, flexWrap:"wrap" }}>
             <div style={{ border:"3px solid #fff", borderRadius:"50%", flexShrink:0 }}>
               {user.photoPreview ? <img src={user.photoPreview} alt="" style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover" }}/> : <Av letter={user.av} size={56}/>}
             </div>
-            <div style={{ flex:1, paddingBottom:4 }}>
+            <div style={{ flex:1, paddingBottom:4, minWidth:120 }}>
               <div style={{ fontSize:18, fontWeight:800, color:"#1a202c", fontFamily:serif }}>{user.name}</div>
               <div style={{ fontSize:12, color:"#64748b", fontFamily:ff }}>📍 {user.city}{moveTimeline ? ` · Moving in ${moveTimeline}` : ""}</div>
             </div>
-            <div style={{ display:"flex", gap:20, paddingBottom:4 }}>
+            <div style={{ display:"flex", gap:16, paddingBottom:4 }}>
               {(isPro
                 ? [{v:(user.linkedBuyers||user.linkedLeads||[]).length,l:"Clients"},{v:updates.length,l:"Updates"},{v:"4.9★",l:"Rating"}]
                 : [{v:myFriends.length,l:"Friends"},{v:updates.length,l:"Updates"},{v:3,l:"Comments"}]
@@ -1538,7 +1619,7 @@ function Drawer({ listing, user, saved, onSave, onClose, onConnect }) {
 
   return (
     <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(10,20,40,0.55)", zIndex:1000, display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(5px)" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius:"22px 22px 0 0", width:"100%", maxWidth:680, maxHeight:"92vh", display:"flex", flexDirection:"column", boxShadow:"0 -12px 60px rgba(0,0,0,0.2)", animation:"fadeUp 0.3s ease" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:"#fff", borderRadius: window.innerWidth<768 ? "18px 18px 0 0" : "22px 22px 0 0", width:"100%", maxWidth: window.innerWidth<768 ? "100%" : 680, maxHeight: window.innerWidth<768 ? "96vh" : "92vh", display:"flex", flexDirection:"column", boxShadow:"0 -12px 60px rgba(0,0,0,0.2)", animation:"fadeUp 0.3s ease" }}>
 
       {/* TENANCY VERIFICATION MODAL */}
       {showVerifyModal && (
@@ -1637,6 +1718,7 @@ function Drawer({ listing, user, saved, onSave, onClose, onConnect }) {
           </div>
           <div style={{ position:"absolute", top:10, right:10, display:"flex", gap:6, alignItems:"center" }}>
             <Badge source={listing.source} type={listing.type}/>
+            {listing.communityListed && <span style={{ background:"#7c3aed", color:"#fff", fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:20, fontFamily:ff }}>🏘️ Community Listed</span>}
             <button onClick={onClose} style={{ border:"none", background:"rgba(255,255,255,0.2)", borderRadius:8, width:28, height:28, cursor:"pointer", color:"#fff", fontSize:14, backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
           </div>
         </div>
@@ -1893,8 +1975,9 @@ function Card({ listing, onOpen, saved, onSave }) {
         <img src={listing.img} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", transition:"transform 0.4s" }}
           onMouseEnter={e => e.target.style.transform="scale(1.04)"}
           onMouseLeave={e => e.target.style.transform="scale(1)"}/>
-        <div style={{ position:"absolute", top:10, left:10 }}>
+        <div style={{ position:"absolute", top:10, left:10, display:"flex", gap:5, flexDirection:"column" }}>
           <span style={{ background:listing.tagColor, color:"#fff", fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:20, fontFamily:ff }}>{listing.tag}</span>
+          {listing.communityListed && <span style={{ background:"#7c3aed", color:"#fff", fontSize:9, fontWeight:700, padding:"2px 8px", borderRadius:20, fontFamily:ff }}>🏘️ Community Listed</span>}
         </div>
         <div style={{ position:"absolute", top:10, right:40 }}><Badge source={listing.source} type={listing.type}/></div>
         <button onClick={e => { e.stopPropagation(); onSave(listing.id); }} style={{ position:"absolute", top:8, right:9, border:"none", background:saved?"#fef3c7":"rgba(255,255,255,0.88)", borderRadius:8, width:29, height:29, cursor:"pointer", fontSize:14, backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", transition:"background 0.2s" }}>🔖</button>
@@ -1948,6 +2031,11 @@ function AuthModal({ onAuth, onClose }) {
   const [brokerPhone, setBrokerPhone] = useState("");
   const [brokerLicense, setBrokerLicense] = useState("");
   const [brokerTier, setBrokerTier] = useState("pro");
+  // Dual-role landlord fields
+  const [isAlsoLandlord, setIsAlsoLandlord] = useState(false);
+  const [landlordVerifyDoc, setLandlordVerifyDoc] = useState(null);
+  const [landlordDocType, setLandlordDocType] = useState("");
+  const landlordDocRef = useRef();
   // Management fields
   const [mgmtCompany, setMgmtCompany] = useState("");
   const [mgmtPhone, setMgmtPhone] = useState("");
@@ -1990,14 +2078,14 @@ function AuthModal({ onAuth, onClose }) {
     if (mode==="register" && accountType==="agent" && (!licenseNum.trim() || !profilePhoto)) return;
     if (mode==="register" && accountType==="broker" && (!brokerLicense.trim() || !profilePhoto)) return;
     if (mode==="register" && accountType==="management" && (!mgmtCompany.trim() || !mgmtVerifyDoc)) return;
-    onAuth({ name:name||email.split("@")[0], email, av, city, accountType:accountType||"buyer", licenseNum, agentBrokerage, agentTier, brokerCompany, brokerPhone, brokerLicense, brokerTier, hasBroker, hasAgent, linkedAgent, photoPreview, managementCompany:mgmtCompany, mgmtPhone, managementTier:mgmtTier });
+    onAuth({ name:name||email.split("@")[0], email, av, city, accountType:accountType||"buyer", licenseNum, agentBrokerage, agentTier, brokerCompany, brokerPhone, brokerLicense, brokerTier, hasBroker, hasAgent, linkedAgent, photoPreview, managementCompany:mgmtCompany, mgmtPhone, managementTier:mgmtTier, isAlsoLandlord, claimedListings: isAlsoLandlord ? [] : undefined });
   };
 
   const canProceed = mode==="login" || (accountType !== "");
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(10,20,40,0.6)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(6px)" }}>
-      <div style={{ background:"#fff", borderRadius:22, width:"100%", maxWidth:460, padding:"32px", boxShadow:"0 24px 64px rgba(0,0,0,0.22)", position:"relative", animation:"fadeUp 0.3s ease", maxHeight:"90vh", overflowY:"auto" }}>
+    <div style={{ position:"fixed", inset:0, background:"rgba(10,20,40,0.6)", zIndex:2000, display:"flex", alignItems: window.innerWidth<768?"flex-end":"center", justifyContent:"center", backdropFilter:"blur(6px)" }}>
+      <div style={{ background:"#fff", borderRadius: window.innerWidth<768?"22px 22px 0 0":22, width:"100%", maxWidth: window.innerWidth<768?"100%":460, padding: window.innerWidth<768?"24px 20px":"32px", boxShadow:"0 24px 64px rgba(0,0,0,0.22)", position:"relative", animation:"fadeUp 0.3s ease", maxHeight: window.innerWidth<768?"96vh":"90vh", overflowY:"auto" }}>
         <button onClick={onClose} style={{ position:"absolute", top:16, right:16, border:"none", background:"#f1f5f9", borderRadius:8, width:30, height:30, cursor:"pointer", fontSize:15, color:"#64748b" }}>✕</button>
 
         {/* Header */}
@@ -2140,6 +2228,60 @@ function AuthModal({ onAuth, onClose }) {
                   </div>
                 </div>
               </>
+            )}
+
+            {/* DUAL-ROLE: also a landlord? — shown for agents and brokers */}
+            {(accountType==="agent" || accountType==="broker") && (
+              <div style={{ marginBottom:20 }}>
+                <div style={{ background:"linear-gradient(135deg,#fff7ed,#ffedd5)", border:"1.5px solid #fed7aa", borderRadius:12, padding:"14px 16px" }}>
+                  <label style={{ fontSize:13, fontWeight:700, color:"#92400e", display:"block", marginBottom:8, fontFamily:ff }}>
+                    🏡 Do you also own rental properties?
+                  </label>
+                  <p style={{ fontSize:12, color:"#92400e", fontFamily:ff, marginBottom:12, lineHeight:1.6 }}>
+                    If you own rental properties, we can add free landlord features to your account — claim listings, respond officially, and access the landlord community. No extra charge.
+                  </p>
+                  <div style={{ display:"flex", gap:8, marginBottom: isAlsoLandlord ? 14 : 0 }}>
+                    {[{v:true,l:"Yes — I own properties too"},{v:false,l:"No — just my professional account"}].map(({v,l}) => (
+                      <button key={String(v)} onClick={()=>setIsAlsoLandlord(v)}
+                        style={{ flex:1, border:`1.5px solid ${isAlsoLandlord===v?"#ea580c":"#e2e8f0"}`, background:isAlsoLandlord===v?"#fff7ed":"#fff", color:isAlsoLandlord===v?"#ea580c":"#64748b", borderRadius:10, padding:"9px 6px", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:ff, transition:"all 0.15s" }}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                  {isAlsoLandlord && (
+                    <div>
+                      <p style={{ fontSize:12, color:"#92400e", fontFamily:ff, marginBottom:10 }}>Upload one document to verify ownership of at least one property:</p>
+                      <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:10 }}>
+                        {[
+                          {v:"deed",     l:"📜 Property deed or title"},
+                          {v:"tax",      l:"🧾 Property tax bill in your name"},
+                          {v:"mortgage", l:"🏦 Mortgage statement"},
+                        ].map(({v,l}) => (
+                          <label key={v} onClick={()=>setLandlordDocType(v)} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", border:`1.5px solid ${landlordDocType===v?"#ea580c":"#e2e8f0"}`, borderRadius:8, cursor:"pointer", background:landlordDocType===v?"#fff7ed":"#fff", transition:"all 0.15s" }}>
+                            <div style={{ width:14, height:14, borderRadius:"50%", border:`2px solid ${landlordDocType===v?"#ea580c":"#cbd5e1"}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                              {landlordDocType===v && <div style={{ width:7, height:7, borderRadius:"50%", background:"#ea580c" }}/>}
+                            </div>
+                            <span style={{ fontSize:12, color:"#1a202c", fontFamily:ff }}>{l}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <input ref={landlordDocRef} type="file" accept="image/*,.pdf" onChange={e=>setLandlordVerifyDoc(e.target.files?.[0]||null)} style={{ display:"none" }}/>
+                      {landlordVerifyDoc ? (
+                        <div style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"#f0fdf4", border:"1.5px solid #bbf7d0", borderRadius:8 }}>
+                          <span>📄</span>
+                          <span style={{ fontSize:12, fontWeight:700, color:"#15803d", fontFamily:ff, flex:1 }}>✓ {landlordVerifyDoc.name}</span>
+                          <button onClick={()=>setLandlordVerifyDoc(null)} style={{ border:"none", background:"none", cursor:"pointer", color:"#94a3b8", fontSize:12 }}>✕</button>
+                        </div>
+                      ) : (
+                        <div onClick={()=>landlordDocRef.current?.click()} style={{ border:"2px dashed #fed7aa", borderRadius:10, padding:"14px", textAlign:"center", cursor:"pointer", background:"#fff" }}>
+                          <div style={{ fontSize:20, marginBottom:2 }}>📎</div>
+                          <div style={{ fontSize:12, fontWeight:600, color:"#ea580c", fontFamily:ff }}>Upload ownership document</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
 
             {/* BROKER-specific fields */}
@@ -2640,6 +2782,9 @@ function ProfileMenu({ user, savedCount, onLogout }) {
         )}
         {user.accountType==="agent" && user.agentBrokerage && (
           <div style={{ fontSize:11, color:"#94a3b8", marginTop:4, fontFamily:ff }}>🏢 {user.agentBrokerage}</div>
+        )}
+        {user.isAlsoLandlord && (
+          <div style={{ fontSize:11, color:"#ea580c", fontWeight:600, marginTop:4, fontFamily:ff }}>🏡 Also a verified landlord · Free</div>
         )}
         {user.accountType==="management" && (
           <div style={{ fontSize:11, color:"#94a3b8", marginTop:4, fontFamily:ff }}>
@@ -3199,7 +3344,7 @@ function ConversationThread({ convo, user, listings, onClose, onSend }) {
 
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(10,20,40,0.55)", zIndex:1500, display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(5px)" }}>
-      <div style={{ background:"#fff", borderRadius:"22px 22px 0 0", width:"100%", maxWidth:560, height:"85vh", display:"flex", flexDirection:"column", boxShadow:"0 -12px 60px rgba(0,0,0,0.2)", animation:"fadeUp 0.3s ease" }}>
+      <div style={{ background:"#fff", borderRadius: window.innerWidth<768?"0":"22px 22px 0 0", width:"100%", maxWidth: window.innerWidth<768?"100%":560, height: window.innerWidth<768?"100vh":"85vh", display:"flex", flexDirection:"column", boxShadow:"0 -12px 60px rgba(0,0,0,0.2)", animation:"fadeUp 0.3s ease" }}>
 
         {/* Header */}
         <div style={{ padding:"14px 18px", borderBottom:"1px solid #f1f5f9", display:"flex", alignItems:"center", gap:12, flexShrink:0 }}>
@@ -3337,8 +3482,8 @@ function PostListingModal({ user, onClose, onPost }) {
   };
 
   return (
-    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(10,20,40,0.6)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(5px)" }}>
-      <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius:20, width:"92%", maxWidth:480, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 20px 60px rgba(0,0,0,0.2)", animation:"fadeUp 0.3s ease" }}>
+    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(10,20,40,0.6)", zIndex:2000, display:"flex", alignItems: window.innerWidth<768?"flex-end":"center", justifyContent:"center", backdropFilter:"blur(5px)" }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius: window.innerWidth<768?"22px 22px 0 0":20, width:"100%", maxWidth:480, maxHeight: window.innerWidth<768?"96vh":"90vh", overflowY:"auto", boxShadow:"0 20px 60px rgba(0,0,0,0.2)", animation:"fadeUp 0.3s ease" }}>
 
         {/* Header */}
         <div style={{ padding:"20px 24px 0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -4281,8 +4426,281 @@ function Onboarding({ user, onComplete, onSkip }) {
   );
 }
 
+// ─── COMMUNITY LISTING MODAL ──────────────────────────────────────────────────
+function CommunityListingModal({ user, searchAddress, onClose, onSubmit }) {
+  const [step, setStep] = useState(1); // 1=details, 2=verify, 3=comment
+  const [address, setAddress] = useState(searchAddress || "");
+  const [city, setCity] = useState("New York, NY");
+  const [type, setType] = useState("For Rent");
+  const [price, setPrice] = useState("");
+  const [beds, setBeds] = useState("1");
+  const [baths, setBaths] = useState("1");
+  const [photos, setPhotos] = useState([]);
+  const [docType, setDocType] = useState("");
+  const [verifyDoc, setVerifyDoc] = useState(null);
+  const [firstComment, setFirstComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const docRef = useRef();
+  const photoRef = useRef();
+
+  const step1Complete = address.trim() && price.trim();
+  const step2Complete = docType && verifyDoc;
+
+  const handlePhotos = (e) => {
+    const files = Array.from(e.target.files||[]);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = ev => setPhotos(p => [...p, { name:file.name, preview:ev.target.result }]);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleSubmit = () => {
+    setSubmitting(true);
+    setTimeout(() => {
+      const newListing = {
+        id: Date.now(),
+        type: type==="For Rent" ? "rent" : "sale",
+        address: address.trim(),
+        city,
+        zip:"00000",
+        price: Number(price),
+        beds: beds==="Studio" ? 0 : Number(beds),
+        baths: Number(baths),
+        sqft: 0,
+        source:"Community",
+        daysAgo:0,
+        lat:40.73,
+        lng:-73.93,
+        img: photos.length > 0 ? photos[0].preview : "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=700&q=80",
+        likes:0,
+        tag: type==="For Rent" ? "For Rent" : "For Sale",
+        tagColor: type==="For Rent" ? "#ea580c" : "#16a34a",
+        hood:"",
+        communityListed:true,
+        listedBy:user.name,
+        comments: firstComment.trim() ? [{
+          id:1,
+          user:user.name,
+          av:user.av,
+          time:"Just now",
+          text:firstComment.trim(),
+          likes:0,
+          roleLabel: user.accountType==="agent"?"🤝 Agent":user.accountType==="broker"?"🏦 Broker":"🗝️ Current Tenant",
+          verified:true,
+        }] : [],
+      };
+      onSubmit(newListing);
+    }, 1000);
+  };
+
+  return (
+    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(10,20,40,0.6)", zIndex:2000, display:"flex", alignItems: window.innerWidth<768?"flex-end":"center", justifyContent:"center", backdropFilter:"blur(5px)" }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:"#fff", borderRadius: window.innerWidth<768?"22px 22px 0 0":20, width:"100%", maxWidth:480, maxHeight: window.innerWidth<768?"96vh":"90vh", overflowY:"auto", boxShadow:"0 20px 60px rgba(0,0,0,0.2)", animation:"fadeUp 0.3s ease" }}>
+
+        {/* Header */}
+        <div style={{ padding:"20px 24px 0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div>
+            <div style={{ fontSize:18, fontWeight:800, color:"#1a202c", fontFamily:serif }}>Add a Building</div>
+            <div style={{ fontSize:12, color:"#94a3b8", fontFamily:ff, marginTop:2 }}>Community listed · Free</div>
+          </div>
+          <button onClick={onClose} style={{ border:"none", background:"#f1f5f9", borderRadius:8, width:30, height:30, cursor:"pointer", fontSize:14, color:"#64748b", display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+        </div>
+
+        {/* Step indicator */}
+        <div style={{ display:"flex", gap:6, padding:"14px 24px 0" }}>
+          {["Building Info","Verify Residency","Your Comment"].map((s,i) => (
+            <div key={s} style={{ flex:1, textAlign:"center" }}>
+              <div style={{ height:3, borderRadius:2, background: step>i+1?"#2563eb":step===i+1?"#2563eb":"#e2e8f0", marginBottom:4, opacity: step>i+1?0.4:1, transition:"all 0.3s" }}/>
+              <div style={{ fontSize:10, color: step===i+1?"#2563eb":"#94a3b8", fontWeight:step===i+1?700:400, fontFamily:ff }}>{s}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ padding:"20px 24px 24px" }}>
+
+          {/* STEP 1 — Building Info */}
+          {step===1 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={{ background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:10, padding:"10px 14px" }}>
+                <p style={{ fontSize:12, color:"#1e40af", fontFamily:ff, lineHeight:1.6 }}>
+                  🏘️ <strong>No apartment numbers</strong> — enter the street address only. All residents of the same building share one listing page on Chathouse.
+                </p>
+              </div>
+              <div>
+                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:5, fontFamily:ff }}>Street Address <span style={{ color:"#dc2626" }}>*</span></label>
+                <input value={address} onChange={e=>setAddress(e.target.value.replace(/\s*(apt|unit|#|suite|ste|apartment)\s*[\w\d]+/gi,"").trim())}
+                  placeholder="e.g. 123 Main St, Springfield, UT"
+                  style={{ width:"100%", padding:"10px 12px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:13, fontFamily:ff, outline:"none", color:"#1a202c" }}/>
+                <p style={{ fontSize:11, color:"#94a3b8", fontFamily:ff, marginTop:4 }}>Street address only — no unit or apartment number</p>
+              </div>
+              <div>
+                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:6, fontFamily:ff }}>City</label>
+                <select value={city} onChange={e=>setCity(e.target.value)} style={{ width:"100%", padding:"10px 12px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:13, fontFamily:ff, outline:"none", color:"#1a202c" }}>
+                  {["New York, NY","Brooklyn, NY","Austin, TX","Atlanta, GA","Houston, TX","Denver, CO","Tampa, FL","Charlotte, NC","Other"].map(c=><option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div style={{ display:"flex", gap:8 }}>
+                {["For Rent","For Sale"].map(t => (
+                  <button key={t} onClick={()=>setType(t)} style={{ flex:1, border:`1.5px solid ${type===t?"#2563eb":"#e2e8f0"}`, background:type===t?"#eff6ff":"#fff", color:type===t?"#2563eb":"#64748b", borderRadius:10, padding:"9px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:ff }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <div>
+                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:5, fontFamily:ff }}>
+                  {type==="For Rent" ? "Monthly Rent" : "Asking Price"} <span style={{ color:"#dc2626" }}>*</span>
+                </label>
+                <div style={{ position:"relative" }}>
+                  <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#64748b", fontFamily:ff }}>$</span>
+                  <input type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder={type==="For Rent"?"2,500":"350,000"} style={{ width:"100%", padding:"10px 12px 10px 26px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:13, fontFamily:ff, outline:"none", color:"#1a202c" }}/>
+                </div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                {[{l:"Bedrooms",v:beds,s:setBeds,opts:["Studio","1","2","3","4+"]},{l:"Bathrooms",v:baths,s:setBaths,opts:["1","1.5","2","2.5","3+"]}].map(({l,v,s,opts})=>(
+                  <div key={l}>
+                    <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:5, fontFamily:ff }}>{l}</label>
+                    <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                      {opts.map(o=>(
+                        <button key={o} onClick={()=>s(o)} style={{ border:`1.5px solid ${v===o?"#2563eb":"#e2e8f0"}`, background:v===o?"#eff6ff":"#fff", color:v===o?"#2563eb":"#64748b", borderRadius:8, padding:"5px 8px", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:ff }}>{o}</button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Photo upload */}
+              <div>
+                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:5, fontFamily:ff }}>
+                  Photos <span style={{ fontSize:11, color:"#94a3b8", fontWeight:400 }}>— strongly recommended</span>
+                </label>
+                <input ref={photoRef} type="file" accept="image/*" multiple onChange={handlePhotos} style={{ display:"none" }}/>
+                {photos.length > 0 ? (
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
+                    {photos.map((p,i) => (
+                      <div key={i} style={{ position:"relative", borderRadius:10, overflow:"hidden", aspectRatio:"4/3" }}>
+                        <img src={p.preview} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+                        <button onClick={() => setPhotos(prev => prev.filter((_,j)=>j!==i))}
+                          style={{ position:"absolute", top:4, right:4, border:"none", background:"rgba(0,0,0,0.5)", color:"#fff", borderRadius:"50%", width:18, height:18, cursor:"pointer", fontSize:10, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+                        {i===0 && <span style={{ position:"absolute", bottom:4, left:4, fontSize:9, fontWeight:700, background:"rgba(0,0,0,0.6)", color:"#fff", padding:"2px 5px", borderRadius:4, fontFamily:ff }}>COVER</span>}
+                      </div>
+                    ))}
+                    {photos.length < 10 && (
+                      <div onClick={()=>photoRef.current?.click()} style={{ border:"2px dashed #bfdbfe", borderRadius:10, aspectRatio:"4/3", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", cursor:"pointer", background:"#eff6ff" }}>
+                        <span style={{ fontSize:18 }}>+</span>
+                        <span style={{ fontSize:10, color:"#2563eb", fontFamily:ff, fontWeight:600 }}>Add</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div onClick={()=>photoRef.current?.click()} style={{ border:"2px dashed #bfdbfe", borderRadius:12, padding:"18px", textAlign:"center", cursor:"pointer", background:"#eff6ff" }}
+                    onMouseEnter={e=>e.currentTarget.style.borderColor="#2563eb"}
+                    onMouseLeave={e=>e.currentTarget.style.borderColor="#bfdbfe"}>
+                    <div style={{ fontSize:24, marginBottom:4 }}>📸</div>
+                    <div style={{ fontSize:13, fontWeight:600, color:"#2563eb", fontFamily:ff }}>Upload building photos</div>
+                    <div style={{ fontSize:11, color:"#94a3b8", fontFamily:ff, marginTop:3 }}>Up to 10 photos · First photo is the cover</div>
+                  </div>
+                )}
+              </div>
+
+              <button onClick={()=>setStep(2)} disabled={!step1Complete} style={{ background:step1Complete?"#2563eb":"#e2e8f0", color:step1Complete?"#fff":"#94a3b8", border:"none", borderRadius:10, padding:"12px", fontSize:14, fontWeight:700, cursor:step1Complete?"pointer":"default", fontFamily:ff, transition:"all 0.2s" }}>
+                Continue →
+              </button>
+            </div>
+          )}
+
+          {/* STEP 2 — Verify Residency */}
+          {step===2 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={{ background:"#f0fdf4", border:"1.5px solid #bbf7d0", borderRadius:12, padding:"12px 14px" }}>
+                <p style={{ fontSize:13, color:"#14532d", fontFamily:ff, lineHeight:1.6 }}>
+                  Your connection to <strong>{address}</strong> makes your listing trustworthy for the community. Upload one document to confirm — kept completely private, never shared publicly.
+                </p>
+              </div>
+              <div>
+                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:8, fontFamily:ff }}>Document type <span style={{ color:"#dc2626" }}>*</span></label>
+                {[
+                  {v:"lease",    l:"📋 Lease agreement"},
+                  {v:"utility",  l:"💡 Utility bill with your name & address"},
+                  {v:"bank",     l:"🏦 Bank statement showing address"},
+                  {v:"id",       l:"🪪 Government ID with matching address"},
+                ].map(({v,l})=>(
+                  <label key={v} onClick={()=>setDocType(v)} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", border:`2px solid ${docType===v?"#2563eb":"#e2e8f0"}`, borderRadius:10, cursor:"pointer", background:docType===v?"#eff6ff":"#fff", transition:"all 0.15s", marginBottom:8 }}>
+                    <div style={{ width:16, height:16, borderRadius:"50%", border:`2px solid ${docType===v?"#2563eb":"#cbd5e1"}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                      {docType===v && <div style={{ width:8, height:8, borderRadius:"50%", background:"#2563eb" }}/>}
+                    </div>
+                    <span style={{ fontSize:13, color:"#1a202c", fontFamily:ff }}>{l}</span>
+                  </label>
+                ))}
+              </div>
+              <input ref={docRef} type="file" accept="image/*,.pdf" onChange={e=>setVerifyDoc(e.target.files?.[0]||null)} style={{ display:"none" }}/>
+              {verifyDoc ? (
+                <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", background:"#f0fdf4", border:"2px solid #bbf7d0", borderRadius:12 }}>
+                  <span style={{ fontSize:20 }}>📄</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#15803d", fontFamily:ff }}>✓ Got it — you're verified!</div>
+                    <div style={{ fontSize:11, color:"#64748b", fontFamily:ff }}>{verifyDoc.name}</div>
+                  </div>
+                  <button onClick={()=>setVerifyDoc(null)} style={{ border:"none", background:"none", cursor:"pointer", color:"#94a3b8", fontSize:13 }}>✕</button>
+                </div>
+              ) : (
+                <div onClick={()=>docRef.current?.click()} style={{ border:"2px dashed #bfdbfe", borderRadius:12, padding:"18px", textAlign:"center", cursor:"pointer", background:"#eff6ff" }}
+                  onMouseEnter={e=>e.currentTarget.style.borderColor="#2563eb"}
+                  onMouseLeave={e=>e.currentTarget.style.borderColor="#bfdbfe"}>
+                  <div style={{ fontSize:24, marginBottom:4 }}>📎</div>
+                  <div style={{ fontSize:13, fontWeight:600, color:"#2563eb", fontFamily:ff }}>Upload your document</div>
+                  <div style={{ fontSize:11, color:"#94a3b8", fontFamily:ff, marginTop:2 }}>PDF, JPG or PNG · Max 10MB</div>
+                </div>
+              )}
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={()=>setStep(1)} style={{ flex:1, background:"#f1f5f9", color:"#64748b", border:"none", borderRadius:10, padding:"11px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:ff }}>← Back</button>
+                <button onClick={()=>setStep(3)} disabled={!step2Complete} style={{ flex:2, background:step2Complete?"#2563eb":"#e2e8f0", color:step2Complete?"#fff":"#94a3b8", border:"none", borderRadius:10, padding:"11px", fontSize:13, fontWeight:700, cursor:step2Complete?"pointer":"default", fontFamily:ff, transition:"all 0.2s" }}>Continue →</button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3 — First Comment */}
+          {step===3 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <div style={{ background:"linear-gradient(135deg,#f0fdf4,#dcfce7)", border:"1.5px solid #bbf7d0", borderRadius:12, padding:"14px 16px", textAlign:"center" }}>
+                <div style={{ fontSize:28, marginBottom:6 }}>✨</div>
+                <div style={{ fontSize:15, fontWeight:800, color:"#14532d", fontFamily:serif, marginBottom:4 }}>You're verified!</div>
+                <p style={{ fontSize:12, color:"#16a34a", fontFamily:ff }}>You're the first person to add <strong>{address}</strong> to Chathouse. Leave the first comment so the community knows what this building is like.</p>
+              </div>
+              <div style={{ background:"#f8fafc", borderRadius:12, border:"1px solid #e8eaed", padding:"12px 14px" }}>
+                {[{l:"Address",v:address},{l:"Type",v:type},{l:"Price",v:type==="For Rent"?`$${Number(price).toLocaleString()}/mo`:`$${Number(price).toLocaleString()}`}].map(({l,v})=>(
+                  <div key={l} style={{ display:"flex", justifyContent:"space-between", padding:"4px 0" }}>
+                    <span style={{ fontSize:11, color:"#94a3b8", fontFamily:ff }}>{l}</span>
+                    <span style={{ fontSize:11, fontWeight:600, color:"#334155", fontFamily:ff }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:6, fontFamily:ff }}>Your first comment <span style={{ fontSize:11, color:"#94a3b8", fontWeight:400 }}>— optional but encouraged</span></label>
+                <textarea value={firstComment} onChange={e=>setFirstComment(e.target.value)} placeholder="Share what you know about this building — anything the community should know..." rows={4}
+                  style={{ width:"100%", padding:"10px 12px", border:"1.5px solid #e2e8f0", borderRadius:10, fontSize:13, fontFamily:ff, outline:"none", color:"#1a202c", resize:"none", lineHeight:1.55 }}/>
+              </div>
+              <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:10, padding:"10px 14px" }}>
+                <p style={{ fontSize:11, color:"#92400e", fontFamily:ff }}>🔒 Your verification document is stored securely and never shared publicly. It's only accessed if legally required.</p>
+              </div>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={()=>setStep(2)} style={{ flex:1, background:"#f1f5f9", color:"#64748b", border:"none", borderRadius:10, padding:"11px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:ff }}>← Back</button>
+                <button onClick={handleSubmit} disabled={submitting} style={{ flex:2, background:submitting?"#f0fdf4":"#2563eb", color:submitting?"#15803d":"#fff", border:"none", borderRadius:10, padding:"11px", fontSize:13, fontWeight:700, cursor:submitting?"default":"pointer", fontFamily:ff, transition:"all 0.2s" }}>
+                  {submitting ? "✓ Adding to Chathouse..." : "🏘️ Add to Chathouse"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function Chathouse() {
+  const windowWidth = useWindowWidth();
+  const isMobile = windowWidth < 768;
   const [tab, setTab] = useState("feed");
   const [view, setView] = useState("grid");
   const [search, setSearch] = useState("");
@@ -4347,6 +4765,8 @@ export default function Chathouse() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingSkipped, setOnboardingSkipped] = useState(false);
   const [showOnboardingReminder, setShowOnboardingReminder] = useState(false);
+  const [communityListings, setCommunityListings] = useState([]);
+  const [showCommunityListingModal, setShowCommunityListingModal] = useState(false);
 
   const handleAuth = u => {
     setUser(u);
@@ -4357,7 +4777,7 @@ export default function Chathouse() {
   };
   const guestUser = { name:"Guest", av:"G" };
 
-  const lists = LISTINGS
+  const lists = [...LISTINGS, ...communityListings]
     .filter(l => city==="All Cities" || l.city===city)
     .filter(l => typeFilter==="All" || (typeFilter==="For Sale"&&l.type==="sale") || (typeFilter==="For Rent"&&l.type==="rent"))
     .filter(l => !search || [l.address,l.city,l.hood].some(s=>s.toLowerCase().includes(search.toLowerCase())))
@@ -4378,29 +4798,43 @@ export default function Chathouse() {
 
         {/* NAVBAR */}
         <nav style={{ background:"#fff", borderBottom:"1px solid #e8eaed", position:"sticky", top:0, zIndex:200, boxShadow:"0 1px 8px rgba(0,0,0,0.05)" }}>
-          <div style={{ maxWidth:1160, margin:"0 auto", padding:"0 20px", display:"flex", alignItems:"center", height:58, gap:16 }}>
+          <div style={{ maxWidth:1160, margin:"0 auto", padding:"0 14px", display:"flex", alignItems:"center", height:isMobile?52:58, gap:isMobile?8:16 }}>
             <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-              <div style={{ width:34, height:34, background:"#2563eb", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🏠</div>
-              <span style={{ fontSize:20, fontWeight:800, color:"#1a202c", fontFamily:serif, letterSpacing:-0.5 }}>Chathouse</span>
+              <svg width="148" height="34" viewBox="0 0 600 140" xmlns="http://www.w3.org/2000/svg" style={{ display:"block" }}>
+                <g transform="translate(24, 16) scale(0.84)">
+                  <polygon points="54,0 108,46 96,46 96,108 12,108 12,46 0,46" fill="#1A6FE8"/>
+                  <rect x="38" y="72" width="32" height="36" rx="4" fill="white"/>
+                  <rect x="58" y="18" width="36" height="28" rx="7" fill="white"/>
+                  <polygon points="62,46 74,46 66,54" fill="white"/>
+                  <circle cx="67" cy="32" r="3" fill="#1A6FE8"/>
+                  <circle cx="76" cy="32" r="3" fill="#1A6FE8"/>
+                  <circle cx="85" cy="32" r="3" fill="#1A6FE8"/>
+                </g>
+                <text x="120" y="84" fontFamily="Arial, Helvetica, sans-serif" fontSize="58" letterSpacing="-2"><tspan fontWeight="800" fill="#0F1F3D">chat</tspan><tspan fontWeight="400" fill="#1A6FE8" letterSpacing="-2">house</tspan></text>
+              </svg>
             </div>
-            <div style={{ flex:1, maxWidth:400, position:"relative" }}>
-              <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#94a3b8" }}>🔍</span>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search address, city, or neighborhood..." style={{ width:"100%", padding:"8px 14px 8px 35px", borderRadius:10, border:"1.5px solid #e8eaed", background:"#f8fafc", fontSize:13, color:"#1a202c", outline:"none", fontFamily:ff }}/>
+            <div style={{ flex:1, position:"relative" }}>
+              <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#94a3b8", fontSize:13 }}>🔍</span>
+              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={isMobile?"Search address or city...":"Search address, city, or neighborhood..."} style={{ width:"100%", padding:"8px 12px 8px 32px", borderRadius:10, border:"1.5px solid #e8eaed", background:"#f8fafc", fontSize:13, color:"#1a202c", outline:"none", fontFamily:ff }}/>
             </div>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginLeft:"auto" }}>
-              <div style={{ display:"flex", background:"#f1f5f9", borderRadius:8, padding:3, gap:2 }}>
-                {[{v:"grid",i:"⊞"},{v:"map",i:"🗺️"}].map(({v,i}) => (
-                  <button key={v} onClick={() => setView(v)} style={{ border:"none", background:view===v?"#fff":"transparent", borderRadius:6, padding:"5px 10px", cursor:"pointer", fontSize:14, boxShadow:view===v?"0 1px 3px rgba(0,0,0,0.1)":"none", transition:"all 0.2s" }}>{i}</button>
-                ))}
-              </div>
-              <div style={{ position:"relative" }}>
-                <button onClick={() => { setShowNotifs(o=>!o); setShowProfile(false); setShowInbox(false); }} style={{ border:"none", background:"#f1f5f9", borderRadius:10, width:37, height:37, cursor:"pointer", fontSize:16, position:"relative", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  🔔
-                  {unread>0 && <span style={{ position:"absolute", top:5, right:5, width:14, height:14, background:"#dc2626", borderRadius:"50%", fontSize:8, color:"#fff", fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", border:"2px solid #fff" }}>{unread}</span>}
-                </button>
-                {showNotifs && <NotifPanel notifs={notifs} onClear={() => setNotifs(p=>p.map(n=>({...n,read:true})))}/>}
-              </div>
-              {user && (
+            <div style={{ display:"flex", alignItems:"center", gap:isMobile?6:10, marginLeft:"auto", flexShrink:0 }}>
+              {!isMobile && (
+                <div style={{ display:"flex", background:"#f1f5f9", borderRadius:8, padding:3, gap:2 }}>
+                  {[{v:"grid",i:"⊞"},{v:"map",i:"🗺️"}].map(({v,i}) => (
+                    <button key={v} onClick={() => setView(v)} style={{ border:"none", background:view===v?"#fff":"transparent", borderRadius:6, padding:"5px 10px", cursor:"pointer", fontSize:14, boxShadow:view===v?"0 1px 3px rgba(0,0,0,0.1)":"none", transition:"all 0.2s" }}>{i}</button>
+                  ))}
+                </div>
+              )}
+              {!isMobile && (
+                <div style={{ position:"relative" }}>
+                  <button onClick={() => { setShowNotifs(o=>!o); setShowProfile(false); setShowInbox(false); }} style={{ border:"none", background:"#f1f5f9", borderRadius:10, width:37, height:37, cursor:"pointer", fontSize:16, position:"relative", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    🔔
+                    {unread>0 && <span style={{ position:"absolute", top:5, right:5, width:14, height:14, background:"#dc2626", borderRadius:"50%", fontSize:8, color:"#fff", fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", border:"2px solid #fff" }}>{unread}</span>}
+                  </button>
+                  {showNotifs && <NotifPanel notifs={notifs} onClear={() => setNotifs(p=>p.map(n=>({...n,read:true})))}/>}
+                </div>
+              )}
+              {!isMobile && user && (
                 <div style={{ position:"relative" }}>
                   <button onClick={() => { setShowInbox(o=>!o); setShowNotifs(false); setShowProfile(false); }} style={{ border:"none", background:"#f1f5f9", borderRadius:10, width:37, height:37, cursor:"pointer", fontSize:16, position:"relative", display:"flex", alignItems:"center", justifyContent:"center" }}>
                     💬
@@ -4439,26 +4873,27 @@ export default function Chathouse() {
               )}
               {user ? (
                 <div style={{ position:"relative" }}>
-                  <button onClick={() => { setShowProfile(o=>!o); setShowNotifs(false); }} style={{ display:"flex", alignItems:"center", gap:8, border:"1.5px solid #e8eaed", borderRadius:10, padding:"4px 12px 4px 5px", cursor:"pointer", background:"#fff" }}>
+                  <button onClick={() => { setShowProfile(o=>!o); setShowNotifs(false); }} style={{ display:"flex", alignItems:"center", gap:isMobile?4:8, border:"1.5px solid #e8eaed", borderRadius:10, padding:isMobile?"4px 8px 4px 4px":"4px 12px 4px 5px", cursor:"pointer", background:"#fff" }}>
                     {user.photoPreview
                       ? <img src={user.photoPreview} alt="" style={{ width:26, height:26, borderRadius:"50%", objectFit:"cover" }}/>
                       : <Av letter={user.av} size={26}/>
                     }
-                    <span style={{ fontSize:13, fontWeight:600, color:"#475569", fontFamily:ff }}>{user.name.split(" ")[0]}</span>
-                    {isPro && <span style={{ fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:20, background: user.accountType==="broker"?"#f5f3ff":"#f0fdf4", color:user.accountType==="broker"?"#7c3aed":"#16a34a", fontFamily:ff }}>{user.accountType==="broker"?"Broker":"Agent"}</span>}
-                    {isMgmt && <span style={{ fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:20, background:"#fef2f2", color:"#dc2626", fontFamily:ff }}>Manager</span>}
-                    {isLandlord && <span style={{ fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:20, background:"#fff7ed", color:"#ea580c", fontFamily:ff }}>Landlord</span>}
+                    {!isMobile && <span style={{ fontSize:13, fontWeight:600, color:"#475569", fontFamily:ff }}>{user.name.split(" ")[0]}</span>}
+                    {!isMobile && isPro && <span style={{ fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:20, background: user.accountType==="broker"?"#f5f3ff":"#f0fdf4", color:user.accountType==="broker"?"#7c3aed":"#16a34a", fontFamily:ff }}>{user.accountType==="broker"?"Broker":"Agent"}</span>}
+                    {!isMobile && isPro && user.isAlsoLandlord && <span style={{ fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:20, background:"#fff7ed", color:"#ea580c", fontFamily:ff }}>🏡</span>}
+                    {!isMobile && isMgmt && <span style={{ fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:20, background:"#fef2f2", color:"#dc2626", fontFamily:ff }}>Manager</span>}
+                    {!isMobile && isLandlord && <span style={{ fontSize:10, fontWeight:700, padding:"2px 7px", borderRadius:20, background:"#fff7ed", color:"#ea580c", fontFamily:ff }}>Landlord</span>}
                   </button>
                   {showProfile && <ProfileMenu user={user} savedCount={saved.length} onLogout={() => { setUser(null); setShowProfile(false); }}/>}
                 </div>
               ) : (
-                <button onClick={() => setShowAuth(true)} style={{ background:"#2563eb", color:"#fff", border:"none", borderRadius:10, padding:"8px 18px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:ff }}>Sign In</button>
+                <button onClick={() => setShowAuth(true)} style={{ background:"#2563eb", color:"#fff", border:"none", borderRadius:10, padding:isMobile?"7px 14px":"8px 18px", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:ff, whiteSpace:"nowrap" }}>Sign In</button>
               )}
             </div>
           </div>
 
-          {/* TABS */}
-          <div style={{ maxWidth:1160, margin:"0 auto", padding:"0 20px", display:"flex", gap:2, borderTop:"1px solid #f1f5f9" }}>
+          {/* TABS — hidden on mobile, replaced by bottom nav */}
+          {!isMobile && <div style={{ maxWidth:1160, margin:"0 auto", padding:"0 20px", display:"flex", gap:2, borderTop:"1px solid #f1f5f9", overflowX:"auto" }}>
             {[
               {k:"feed",l:"🏘️ Live Feed"},
               {k:"trending",l:"🔥 Trending"},
@@ -4469,9 +4904,11 @@ export default function Chathouse() {
               ...(user?.accountType==="agent" ? [
                 {k:"leads",l:"🔍 Buyer Leads"},
                 {k:"dashboard",l:"📊 Agent Dashboard"},
+                ...(user?.isAlsoLandlord ? [{k:"myproperties",l:"🏡 My Properties"}] : []),
               ] : []),
               ...(user?.accountType==="broker" ? [
                 {k:"dashboard",l:"📊 Broker Dashboard"},
+                ...(user?.isAlsoLandlord ? [{k:"myproperties",l:"🏡 My Properties"}] : []),
               ] : []),
               ...(user?.accountType==="management" ? [
                 {k:"dashboard",l:"📊 Property Dashboard"},
@@ -4480,32 +4917,32 @@ export default function Chathouse() {
                 {k:"dashboard",l:"🏡 My Property"},
               ] : []),
             ].map(({k,l}) => (
-              <button key={k} onClick={() => setTab(k)} style={{ border:"none", background:"transparent", padding:"9px 16px", fontSize:13, fontWeight:600, cursor:"pointer", color:tab===k?(user?.accountType==="broker"?"#7c3aed":"#16a34a"):"#64748b", borderBottom:tab===k?`2.5px solid ${user?.accountType==="broker"?"#7c3aed":"#16a34a"}`:"2.5px solid transparent", transition:"all 0.15s", fontFamily:ff }}>{l}</button>
+              <button key={k} onClick={() => setTab(k)} style={{ border:"none", background:"transparent", padding:"9px 16px", fontSize:13, fontWeight:600, cursor:"pointer", color:tab===k?(user?.accountType==="broker"?"#7c3aed":"#16a34a"):"#64748b", borderBottom:tab===k?`2.5px solid ${user?.accountType==="broker"?"#7c3aed":"#16a34a"}`:"2.5px solid transparent", transition:"all 0.15s", fontFamily:ff, whiteSpace:"nowrap" }}>{l}</button>
             ))}
-          </div>
+          </div>}
         </nav>
 
         {/* FILTERS — hidden on pro tabs and profile */}
         {tab!=="dashboard" && tab!=="leads" && tab!=="myprofile" && tab!=="news" && tab!=="calculator" && !(tab==="dashboard" && isMgmt) && !(tab==="dashboard" && isLandlord) && (
         <div style={{ background:"#fff", borderBottom:"1px solid #e8eaed" }}>
-          <div style={{ maxWidth:1160, margin:"0 auto", padding:"10px 20px", display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
-            <span style={{ fontSize:10, fontWeight:700, color:"#94a3b8", textTransform:"uppercase", letterSpacing:0.8, fontFamily:ff }}>Type:</span>
+          <div style={{ maxWidth:1160, margin:"0 auto", padding:"10px 14px", display:"flex", gap:8, alignItems:"center", overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
+            <span style={{ fontSize:10, fontWeight:700, color:"#94a3b8", textTransform:"uppercase", letterSpacing:0.8, fontFamily:ff, flexShrink:0 }}>Type:</span>
             {TYPES.map(t => <Chip key={t} active={typeFilter===t} onClick={() => setTypeFilter(t)}>{t==="For Sale"?"🏠 For Sale":t==="For Rent"?"🏢 For Rent":"🏘️ All"}</Chip>)}
-            <div style={{ width:1, height:18, background:"#e8eaed", margin:"0 4px" }}/>
-            <span style={{ fontSize:10, fontWeight:700, color:"#94a3b8", textTransform:"uppercase", letterSpacing:0.8, fontFamily:ff }}>City:</span>
+            <div style={{ width:1, height:18, background:"#e8eaed", margin:"0 4px", flexShrink:0 }}/>
+            <span style={{ fontSize:10, fontWeight:700, color:"#94a3b8", textTransform:"uppercase", letterSpacing:0.8, fontFamily:ff, flexShrink:0 }}>City:</span>
             {CITIES.map(c => <Chip key={c} active={city===c} onClick={() => setCity(c)}>{c}</Chip>)}
-            <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8 }}>
+            {!isMobile && <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
               <span style={{ fontSize:12, color:"#94a3b8", fontWeight:600, fontFamily:ff }}>Sort:</span>
               <select value={sort} onChange={e=>setSort(e.target.value)} style={{ border:"1.5px solid #e8eaed", borderRadius:8, padding:"5px 10px", fontSize:12, color:"#475569", background:"#fff", outline:"none", fontFamily:ff }}>
                 {SORTS.map(s=><option key={s}>{s}</option>)}
               </select>
-            </div>
+            </div>}
           </div>
         </div>
         )}
 
         {/* MAIN */}
-        <div style={{ maxWidth:1160, margin:"0 auto", padding:"24px 20px" }}>
+        <div style={{ maxWidth:1160, margin:"0 auto", padding:isMobile?"16px 12px 100px":"24px 20px" }}>
 
           {/* ONBOARDING — replaces content inline */}
           {showOnboarding && user && (
@@ -4544,25 +4981,27 @@ export default function Chathouse() {
             <ManagementDashboard user={user} listings={LISTINGS} onOpenListing={setOpenL}/>
           ) : tab==="dashboard" && isLandlord ? (
             <ManagementDashboard user={user} listings={LISTINGS} onOpenListing={setOpenL}/>
+          ) : tab==="myproperties" && isPro && user?.isAlsoLandlord ? (
+            <ManagementDashboard user={{...user, accountType:"landlord"}} listings={LISTINGS} onOpenListing={setOpenL}/>
           ) : tab==="leads" && isPro ? (
             <BrokerLeadFeed user={user}/>
           ) : (
             <>
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:18, flexWrap:"wrap", gap:12 }}>
                 <div>
-                  <span style={{ fontSize:22, fontWeight:800, color:"#1a202c", fontFamily:serif }}>
+                  <span style={{ fontSize:isMobile?18:22, fontWeight:800, color:"#1a202c", fontFamily:serif }}>
                     {tab==="feed"?"Live Listings":tab==="trending"?"🔥 Trending Now":"🔖 Saved"}
                   </span>
                   <span style={{ fontSize:13, color:"#94a3b8", marginLeft:10, fontFamily:ff }}>{lists.length} listings</span>
                 </div>
-                <div style={{ display:"flex", gap:10 }}>
+                {!isMobile && <div style={{ display:"flex", gap:10 }}>
                   {[{icon:"🏠",label:"For Sale",val:LISTINGS.filter(l=>l.type==="sale").length},{icon:"🏢",label:"For Rent",val:LISTINGS.filter(l=>l.type==="rent").length},{icon:"💬",label:"Comments",val:notifs.length+89}].map(({icon,label,val}) => (
                     <div key={label} style={{ textAlign:"center", background:"#fff", padding:"7px 14px", borderRadius:12, border:"1px solid #e8eaed" }}>
                       <div style={{ fontSize:11, color:"#94a3b8", fontFamily:ff }}>{icon} {label}</div>
                       <div style={{ fontSize:15, fontWeight:800, color:"#1a202c", fontFamily:serif }}>{val}</div>
                     </div>
                   ))}
-                </div>
+                </div>}
               </div>
 
               <div style={{ background:"linear-gradient(135deg,#eff6ff,#f0fdf4)", border:"1.5px solid #bfdbfe", borderRadius:14, padding:"11px 18px", display:"flex", alignItems:"center", gap:10, marginBottom: (user && !isPro && !isMgmt && !isLandlord && (typeFilter!=="All" || city!=="All Cities")) ? 10 : 22 }}>
@@ -4592,8 +5031,28 @@ export default function Chathouse() {
                   <div style={{ fontSize:18, fontWeight:700, color:"#475569", marginBottom:8, fontFamily:ff }}>No saved listings yet</div>
                   <div style={{ fontSize:14, color:"#94a3b8", fontFamily:ff }}>Tap 🔖 on any listing to save it here.</div>
                 </div>
+              ) : lists.length===0 && search.trim() ? (
+                <div style={{ textAlign:"center", padding:"60px 20px", animation:"fadeUp 0.3s ease" }}>
+                  <div style={{ fontSize:48, marginBottom:16 }}>🏠</div>
+                  <div style={{ fontSize:20, fontWeight:800, color:"#1a202c", fontFamily:serif, marginBottom:8 }}>No listings found for "{search}"</div>
+                  <p style={{ fontSize:14, color:"#64748b", fontFamily:ff, maxWidth:420, margin:"0 auto 24px", lineHeight:1.7 }}>
+                    This address might not be in our database yet. If you live there or know this building, you can add it to Chathouse and be the first to comment.
+                  </p>
+                  {user ? (
+                    <button onClick={() => setShowCommunityListingModal(true)} style={{ background:"#2563eb", color:"#fff", border:"none", borderRadius:12, padding:"13px 28px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:ff, display:"inline-flex", alignItems:"center", gap:8 }}>
+                      🏘️ Add this address to Chathouse
+                    </button>
+                  ) : (
+                    <div>
+                      <button onClick={() => setShowAuth(true)} style={{ background:"#2563eb", color:"#fff", border:"none", borderRadius:12, padding:"13px 28px", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:ff }}>
+                        Sign in to add this address →
+                      </button>
+                      <p style={{ fontSize:12, color:"#94a3b8", fontFamily:ff, marginTop:10 }}>Free to join — no credit card needed</p>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(285px,1fr))", gap:20 }}>
+                <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(285px,1fr))", gap:isMobile?14:20 }}>
                   {lists.map(l => <Card key={l.id} listing={l} onOpen={setOpenL} saved={saved.includes(l.id)} onSave={handleSave}/>)}
                 </div>
               )}
@@ -4610,8 +5069,98 @@ export default function Chathouse() {
         }}
       />}
       {showAuth && <AuthModal onAuth={handleAuth} onClose={() => setShowAuth(false)}/>}
+      {showCommunityListingModal && user && (
+        <CommunityListingModal
+          user={user}
+          searchAddress={search}
+          onClose={() => setShowCommunityListingModal(false)}
+          onSubmit={(listing) => {
+            setCommunityListings(p => [...p, listing]);
+            setShowCommunityListingModal(false);
+            setOpenL(listing);
+            push({ icon:"🏘️", title:"Building added!", body:`${listing.address} is now on Chathouse. You're the first to comment.` });
+          }}
+        />
+      )}
       {toast && <Toast n={toast} onDismiss={() => setToast(null)}/>}
       {(showNotifs||showProfile||showInbox) && <div style={{ position:"fixed", inset:0, zIndex:199 }} onClick={closeDropdowns}/>}
+
+      {/* MOBILE BOTTOM NAV */}
+      {isMobile && (
+        <div style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:300, background:"#fff", borderTop:"1px solid #e8eaed", display:"flex", alignItems:"stretch", boxShadow:"0 -4px 16px rgba(0,0,0,0.08)", paddingBottom:"env(safe-area-inset-bottom,0px)" }}>
+          {[
+            { icon:"🏘️", label:"Feed",     tab:"feed" },
+            { icon:"🔥", label:"Trending",  tab:"trending" },
+            { icon: user ? (
+                user.accountType==="agent" ? "📊" :
+                user.accountType==="broker" ? "📊" :
+                user.accountType==="management" ? "📊" :
+                user.accountType==="landlord" ? "🏡" : "➕"
+              ) : "➕",
+              label: user ? (
+                user.accountType==="agent" || user.accountType==="broker" ? "Dashboard" :
+                user.accountType==="management" || user.accountType==="landlord" ? "My Place" : "Add"
+              ) : "Add",
+              tab: user && (isPro||isMgmt||isLandlord) ? "dashboard" : "add"
+            },
+            { icon:"💬", label:"Messages",  tab:"messages", badge: conversations.reduce((s,c)=>s+c.unread,0) },
+            { icon:"👤", label:"Profile",   tab: user ? "myprofile" : "signin" },
+          ].map(({icon,label,tab:t,badge}) => {
+            const isActive = tab===t || (t==="messages" && showInbox);
+            return (
+              <button key={t} onClick={() => {
+                if (t==="signin") { setShowAuth(true); return; }
+                if (t==="messages") { setShowInbox(o=>!o); setShowNotifs(false); setShowProfile(false); return; }
+                if (t==="add") {
+                  if (!user) { setShowAuth(true); return; }
+                  setShowCommunityListingModal(true);
+                  return;
+                }
+                setTab(t);
+                setShowInbox(false);
+                setShowNotifs(false);
+                setShowProfile(false);
+              }} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:3, padding:"10px 4px 8px", border:"none", background:"transparent", cursor:"pointer", position:"relative", minHeight:56 }}>
+                <span style={{ fontSize:t==="add"?24:20, lineHeight:1, filter: isActive ? "none" : "grayscale(30%)", opacity: isActive ? 1 : 0.55 }}>{icon}</span>
+                <span style={{ fontSize:10, fontWeight: isActive ? 700 : 500, color: isActive ? "#2563eb" : "#94a3b8", fontFamily:ff, letterSpacing:0.1 }}>{label}</span>
+                {badge > 0 && <span style={{ position:"absolute", top:7, left:"50%", marginLeft:4, width:16, height:16, background:"#2563eb", borderRadius:"50%", fontSize:9, color:"#fff", fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", border:"2px solid #fff" }}>{badge}</span>}
+                {isActive && <span style={{ position:"absolute", top:0, left:"20%", right:"20%", height:2.5, background:"#2563eb", borderRadius:"0 0 3px 3px" }}/>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* MOBILE INBOX SHEET */}
+      {isMobile && showInbox && (
+        <div style={{ position:"fixed", inset:0, zIndex:400, background:"rgba(0,0,0,0.4)" }} onClick={() => setShowInbox(false)}>
+          <div onClick={e=>e.stopPropagation()} style={{ position:"absolute", bottom:0, left:0, right:0, background:"#fff", borderRadius:"20px 20px 0 0", maxHeight:"80vh", overflow:"hidden", display:"flex", flexDirection:"column" }}>
+            <div style={{ padding:"16px 20px 12px", borderBottom:"1px solid #f1f5f9", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontWeight:700, fontSize:16, color:"#1a202c", fontFamily:ff }}>Messages</span>
+              <button onClick={() => setShowInbox(false)} style={{ border:"none", background:"#f1f5f9", borderRadius:8, width:28, height:28, cursor:"pointer", fontSize:13, color:"#64748b" }}>✕</button>
+            </div>
+            <div style={{ overflowY:"auto", flex:1 }}>
+              {conversations.map(c => (
+                <div key={c.id} onClick={() => { setActiveConvo(c.id); setShowInbox(false); setConversations(p => p.map(x => x.id===c.id ? {...x,unread:0} : x)); }}
+                  style={{ padding:"14px 20px", borderBottom:"1px solid #f8fafc", display:"flex", gap:12, cursor:"pointer", background:c.unread>0?"#f8fafc":"#fff" }}>
+                  <div style={{ position:"relative", flexShrink:0 }}>
+                    <Av letter={c.with.av} size={44}/>
+                    {c.with.badge && <span style={{ position:"absolute", bottom:-2, right:-2, fontSize:11, background:"#fff", borderRadius:"50%", width:20, height:20, display:"flex", alignItems:"center", justifyContent:"center", border:"1px solid #e8eaed" }}>{c.with.badge.split(" ")[0]}</span>}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:3 }}>
+                      <span style={{ fontSize:14, fontWeight:700, color:"#1a202c", fontFamily:ff }}>{c.with.name}</span>
+                      <span style={{ fontSize:11, color:"#94a3b8", fontFamily:ff }}>{c.time}</span>
+                    </div>
+                    <div style={{ fontSize:13, color:"#64748b", fontFamily:ff, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{c.lastMsg}</div>
+                  </div>
+                  {c.unread>0 && <div style={{ width:20, height:20, background:"#2563eb", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, color:"#fff", fontWeight:700, flexShrink:0, alignSelf:"center" }}>{c.unread}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CONVERSATION THREAD */}
       {activeConvo && user && (() => {
